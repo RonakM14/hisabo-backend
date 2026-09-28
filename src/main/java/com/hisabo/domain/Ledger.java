@@ -1,4 +1,4 @@
-package com.ledgerone.domain;
+package com.hisabo.domain;
 
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;

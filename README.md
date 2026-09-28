@@ -1,6 +1,6 @@
-# LedgerOne Backend
+# Hisabo Backend
 
-Java 25 / Spring Boot 4.1.1 REST API for the LedgerOne React app. This is an independent Maven and Git project. The matching project is `ledgerone-frontend`.
+Java 25 / Spring Boot 4.1.1 REST API for the Hisabo React app. This is an independent Maven and Git project. The matching project is `hisabo-frontend`.
 
 ## Requirements
 
@@ -11,10 +11,10 @@ Java 25 / Spring Boot 4.1.1 REST API for the LedgerOne React app. This is an ind
 
 1. Open this directory, or its `pom.xml`, as a Maven project.
 2. Set **Project SDK** and **Maven runner JRE** to JDK 25. Use an IntelliJ version that supports Java 25.
-3. Run the included **LedgerOne Backend** configuration, or open `src/main/java/com/ledgerone/LedgerOneApplication.java` and run its `main` method.
+3. Run the included **Hisabo Backend** configuration, or open `src/main/java/com/hisabo/HisaboApplication.java` and run its `main` method.
 4. Keep the working directory set to this repository. The included run configuration does this and sets `LEDGER_DATA_DIR` to the repository's `data` directory.
 5. The API starts at `http://127.0.0.1:8080`. Open `/api/health` to confirm it is running.
-6. In the separate frontend repository, run `npm ci` then `npm run dev`. Open `http://localhost:5173`.
+6. In the separate frontend repository, run `npm ci` then `npm run dev`. Open `http://hisabo.localhost:5173`.
 
 You can set breakpoints in the controller, service, or XML store and run **Debug** in IntelliJ. Keep the frontend running in VS Code.
 
@@ -36,7 +36,7 @@ Build, test, and run a packaged app:
 
 ```sh
 ./mvnw verify
-java -jar target/ledgerone-backend-1.0.0.jar
+java -jar target/hisabo-backend-1.0.0.jar
 ```
 
 On Windows, use `.\mvnw.cmd` in place of `./mvnw`. If the wrapper loses its executable permission after extraction on macOS/Linux, run `chmod +x mvnw`.
@@ -47,11 +47,11 @@ Keep the directories beside each other:
 
 ```text
 workspace/
-  ledgerone-backend/
-  ledgerone-frontend/
+  hisabo-backend/
+  hisabo-frontend/
 ```
 
-Run `npm ci` and then `npm run dev:all` from `ledgerone-frontend`. It starts the Maven backend, waits for its health check, then starts React. Ctrl+C stops both processes. Do not also start the IntelliJ backend on the same port; use frontend-only `npm run dev` when debugging Java separately.
+Run `npm ci` and then `npm run dev:all` from `hisabo-frontend`. It starts the Maven backend, waits for its health check, then starts React. Ctrl+C stops both processes. Do not also start the IntelliJ backend on the same port; use frontend-only `npm run dev` when debugging Java separately.
 
 ## Annual XML storage
 
@@ -114,7 +114,7 @@ For an empty personal ledger, set `LEDGER_SEED_DEMO=false` **before the first ru
 | `LEDGER_SEED_DEMO` | `true` | Seed sample data only when no annual files exist |
 | `PORT` | `8080` | Backend port |
 | `SERVER_ADDRESS` | `127.0.0.1` | Bind locally |
-| `LEDGER_ALLOWED_ORIGINS` | localhost and 127.0.0.1 on ports 5173 and 4173 | Comma-separated exact frontend origins |
+| `LEDGER_ALLOWED_ORIGINS` | hisabo.localhost, localhost, and 127.0.0.1 on ports 5173 and 4173 | Comma-separated exact frontend origins |
 
 Spring reads environment variables, not an arbitrary `.env` file. Set them in your IDE run configuration or terminal. Never point multiple deployed replicas at different copies of the same logical ledger.
 

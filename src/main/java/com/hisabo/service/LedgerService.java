@@ -1,7 +1,7 @@
-package com.ledgerone.service;
+package com.hisabo.service;
 
-import com.ledgerone.domain.Ledger.*;
-import com.ledgerone.storage.XmlLedgerStore;
+import com.hisabo.domain.Ledger.*;
+import com.hisabo.storage.XmlLedgerStore;
 import java.time.Instant;
 import java.util.*;
 import org.springframework.stereotype.Service;

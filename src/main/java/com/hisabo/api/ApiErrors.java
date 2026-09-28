@@ -1,7 +1,7 @@
-package com.ledgerone.api;
+package com.hisabo.api;
 
-import com.ledgerone.service.LedgerService.NotFoundException;
-import com.ledgerone.storage.XmlLedgerStore.*;
+import com.hisabo.service.LedgerService.NotFoundException;
+import com.hisabo.storage.XmlLedgerStore.*;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.*;
 import org.springframework.http.converter.HttpMessageNotReadableException;

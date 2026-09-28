@@ -1,4 +1,4 @@
-# LedgerOne API
+# Hisabo API
 
 Base URL: `http://127.0.0.1:8080/api`. Requests and responses use JSON; the Java backend persists data as XML. Dates are `YYYY-MM-DD`; timestamps are ISO-8601 UTC.
 

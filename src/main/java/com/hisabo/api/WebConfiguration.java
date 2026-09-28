@@ -1,4 +1,4 @@
-package com.ledgerone.api;
+package com.hisabo.api;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;

@@ -1,10 +1,10 @@
-package com.ledgerone;
+package com.hisabo;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import com.ledgerone.domain.Ledger.*;
-import com.ledgerone.service.LedgerService;
-import com.ledgerone.storage.XmlLedgerStore;
+import com.hisabo.domain.Ledger.*;
+import com.hisabo.service.LedgerService;
+import com.hisabo.storage.XmlLedgerStore;
 import java.math.BigDecimal;
 import java.nio.file.*;
 import java.time.LocalDate;

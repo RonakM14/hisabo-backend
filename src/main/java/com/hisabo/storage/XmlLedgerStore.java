@@ -1,9 +1,9 @@
-package com.ledgerone.storage;
+package com.hisabo.storage;
 
 import static java.nio.file.StandardOpenOption.*;
 
-import com.ledgerone.domain.Ledger;
-import com.ledgerone.domain.Ledger.*;
+import com.hisabo.domain.Ledger;
+import com.hisabo.domain.Ledger.*;
 import java.io.*;
 import java.math.BigDecimal;
 import java.nio.channels.FileChannel;

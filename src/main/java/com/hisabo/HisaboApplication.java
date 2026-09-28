@@ -1,11 +1,11 @@
-package com.ledgerone;
+package com.hisabo;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class LedgerOneApplication {
+public class HisaboApplication {
   public static void main(String[] args) {
-    SpringApplication.run(LedgerOneApplication.class, args);
+    SpringApplication.run(HisaboApplication.class, args);
   }
 }

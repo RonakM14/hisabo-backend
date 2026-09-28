@@ -2,8 +2,8 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-parent</artifactId><version>4.1.1</version><relativePath/></parent>
-  <groupId>com.ledgerone</groupId><artifactId>ledgerone-backend</artifactId><version>1.0.0</version>
-  <name>LedgerOne Backend</name><description>Java 25 budgeting API with annual XML persistence</description>
+  <groupId>com.hisabo</groupId><artifactId>hisabo-backend</artifactId><version>1.0.0</version>
+  <name>Hisabo Backend</name><description>Java 25 budgeting API with annual XML persistence</description>
   <properties><java.version>25</java.version></properties>
   <dependencies>
     <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-webmvc</artifactId></dependency>

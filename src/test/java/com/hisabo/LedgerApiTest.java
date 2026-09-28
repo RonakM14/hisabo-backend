@@ -1,10 +1,11 @@
-package com.ledgerone;
+package com.hisabo;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.net.URI;
 import java.net.http.*;
 import java.nio.file.*;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -95,20 +96,30 @@ class LedgerApiTest {
 
   @Test
   void browserProxyOriginsCanWriteAndUnknownOriginsAreRejected() throws Exception {
-    for (String origin :
-        new String[] {
-          "http://127.0.0.1:5173", "http://localhost:5173", "https://untrusted.example"
-        }) {
+    for (var origin :
+        Map.of(
+                "http://127.0.0.1:5173", 200,
+                "http://localhost:5173", 200,
+                "http://hisabo.localhost:5173", 200,
+                "http://hisabo.localhost:4173", 200,
+                "https://untrusted.example", 403,
+                "http://other.localhost:5173", 403)
+            .entrySet()) {
       var request =
           HttpRequest.newBuilder(
                   URI.create("http://127.0.0.1:" + port + "/api/years/2029/transactions"))
-              .header("Origin", origin)
+              .header("Origin", origin.getKey())
               .header("Access-Control-Request-Method", "POST")
               .header("Access-Control-Request-Headers", "content-type")
               .method("OPTIONS", HttpRequest.BodyPublishers.noBody())
               .build();
       var response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
-      assertEquals(origin.endsWith(":5173") ? 200 : 403, response.statusCode());
+      assertEquals(origin.getValue(), response.statusCode(), origin.getKey());
+      if (origin.getValue() == 200) {
+        assertEquals(
+            origin.getKey(),
+            response.headers().firstValue("Access-Control-Allow-Origin").orElseThrow());
+      }
     }
   }
 }

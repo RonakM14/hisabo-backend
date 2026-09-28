@@ -1,8 +1,8 @@
-package com.ledgerone.api;
+package com.hisabo.api;
 
-import com.ledgerone.domain.Ledger.*;
-import com.ledgerone.service.LedgerService;
-import com.ledgerone.storage.XmlLedgerStore;
+import com.hisabo.domain.Ledger.*;
+import com.hisabo.service.LedgerService;
+import com.hisabo.storage.XmlLedgerStore;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import java.time.LocalDate;
@@ -24,7 +24,7 @@ public class LedgerController {
 
   @GetMapping("/health")
   public Map<String, String> health() {
-    return Map.of("status", "UP", "application", "LedgerOne", "storage", "annual-xml");
+    return Map.of("status", "UP", "application", "Hisabo", "storage", "annual-xml");
   }
 
   @GetMapping("/years")
