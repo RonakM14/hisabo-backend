@@ -1,0 +1,8 @@
+/target/
+/data/*
+!/data/.gitkeep
+/.idea/
+*.iml
+/.env
+*.log
+/.DS_Store

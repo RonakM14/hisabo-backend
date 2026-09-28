@@ -1,0 +1,9 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="LedgerOne Backend" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="com.ledgerone.LedgerOneApplication" />
+    <module name="ledgerone-backend" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <envs><env name="LEDGER_DATA_DIR" value="$PROJECT_DIR$/data" /></envs>
+    <method v="2"><option name="Make" enabled="true" /></method>
+  </configuration>
+</component>
