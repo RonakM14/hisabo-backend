@@ -1,11 +1,10 @@
 package com.hisabo.api;
 
 import com.hisabo.domain.Ledger.*;
-import com.hisabo.service.LedgerService;
-import com.hisabo.storage.XmlLedgerStore;
+import com.hisabo.profile.ProfileService;
+import com.hisabo.profile.ProfileService.ProfileYear;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
-import java.time.LocalDate;
 import java.util.*;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -14,12 +13,10 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api")
 @Validated
 public class LedgerController {
-  private final XmlLedgerStore store;
-  private final LedgerService service;
+  private final ProfileService profiles;
 
-  public LedgerController(XmlLedgerStore store, LedgerService service) {
-    this.store = store;
-    this.service = service;
+  public LedgerController(ProfileService profiles) {
+    this.profiles = profiles;
   }
 
   @GetMapping("/health")
@@ -29,37 +26,34 @@ public class LedgerController {
 
   @GetMapping("/years")
   public Map<String, Object> years() {
-    var years = new TreeSet<Integer>(Comparator.reverseOrder());
-    years.addAll(store.years());
-    years.add(LocalDate.now().getYear());
-    return Map.of("years", years, "currency", "USD");
+    return profiles.years("default");
   }
 
   @GetMapping("/years/{year}")
-  public Year year(@PathVariable int year) {
-    return store.read(year);
+  public ProfileYear year(@PathVariable int year) {
+    return profiles.year("default", year);
   }
 
   @PostMapping(value = "/years/{year}/transactions", consumes = "application/json")
-  public Year add(@PathVariable int year, @Valid @RequestBody TransactionInput input) {
-    return service.add(year, input);
+  public ProfileYear add(@PathVariable int year, @Valid @RequestBody TransactionInput input) {
+    return profiles.add("default", year, input);
   }
 
   @PutMapping(value = "/years/{year}/transactions/{id}", consumes = "application/json")
-  public Year edit(
+  public ProfileYear edit(
       @PathVariable int year, @PathVariable UUID id, @Valid @RequestBody TransactionInput input) {
-    return service.edit(year, id, input);
+    return profiles.edit("default", year, id, input);
   }
 
   @DeleteMapping("/years/{year}/transactions/{id}")
-  public Year delete(
+  public ProfileYear delete(
       @PathVariable int year, @PathVariable UUID id, @RequestParam @Min(0) long revision) {
-    return service.delete(year, id, revision);
+    return profiles.delete("default", year, id, revision);
   }
 
   @PutMapping(value = "/years/{year}/months/{month}/budgets", consumes = "application/json")
-  public Year budgets(
+  public ProfileYear budgets(
       @PathVariable int year, @PathVariable int month, @Valid @RequestBody BudgetInput input) {
-    return service.budgets(year, month, input);
+    return profiles.budgets("default", year, month, input);
   }
 }

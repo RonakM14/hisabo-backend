@@ -41,7 +41,7 @@ public class DemoData implements ApplicationRunner {
     };
     for (Month m : ledger.months()) {
       for (int i = 0; i < categories.length; i++)
-        m.budgets().put(categories[i], new BigDecimal(amounts[i]));
+        m.budgets().put(categories[i].name(), new BigDecimal(amounts[i]));
       if (m.number() > today.getMonthValue()) continue;
       add(ledger, m, today, 1, "Monthly salary", Category.SALARY, "3600", Account.CHECKING);
       add(ledger, m, today, 1, "Apartment rent", Category.HOUSING, "1750", Account.CHECKING);
@@ -152,7 +152,16 @@ public class DemoData implements ApplicationRunner {
       add(ledger, m, today, 26, "Fuel station", Category.TRANSPORT, "62.40", Account.CREDIT);
       add(ledger, m, today, 27, "Creative software", Category.LIFESTYLE, "32", Account.CHECKING);
     }
-    return new Year(ledger.year(), "USD", 1, true, ledger.months());
+    return new Year(
+        ledger.year(),
+        "USD",
+        1,
+        true,
+        ledger.months().stream()
+            .map(
+                m ->
+                    new Month(m.number(), m.budgets(), m.transactions(), BudgetOrigin.MANUAL, null))
+            .toList());
   }
 
   private static String scaled(double amount, int month) {
@@ -181,7 +190,7 @@ public class DemoData implements ApplicationRunner {
                 c.type,
                 description,
                 new BigDecimal(amount).setScale(2),
-                c,
+                c.name(),
                 account,
                 date,
                 at,

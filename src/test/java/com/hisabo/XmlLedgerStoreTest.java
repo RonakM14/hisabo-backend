@@ -22,7 +22,7 @@ class XmlLedgerStoreTest {
         Type.EXPENSE,
         description,
         new BigDecimal(amount),
-        Category.FOOD,
+        Category.FOOD.name(),
         Account.CHECKING,
         LocalDate.parse(date));
   }

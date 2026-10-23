@@ -47,7 +47,7 @@ public class XmlLedgerStore {
 
   public Year read(int year) {
     checkYear(year);
-    return locked(() -> readUnlocked(year));
+    return locked(() -> materialize(year));
   }
 
   public List<Integer> years() {
@@ -68,7 +68,7 @@ public class XmlLedgerStore {
     checkYear(year);
     return locked(
         () -> {
-          Year previous = readUnlocked(year);
+          Year previous = materialize(year);
           if (previous.revision() != expectedRevision)
             throw new ConflictException(
                 "This year changed in another window. Refresh and try again.");
@@ -79,7 +79,7 @@ public class XmlLedgerStore {
                   previous.currency(),
                   previous.revision() + 1,
                   changed.demo(),
-                  changed.months());
+                  carryForward(changed).months());
           writeAtomic(next);
           return next;
         });
@@ -113,6 +113,92 @@ public class XmlLedgerStore {
     }
   }
 
+  private Year materialize(int year) throws IOException {
+    Year previous = readUnlocked(year);
+    Year resolved = carryForward(previous);
+    if (resolved.months().equals(previous.months())) return previous;
+    Year next =
+        new Year(
+            year, previous.currency(), previous.revision() + 1, previous.demo(), resolved.months());
+    writeAtomic(next);
+    return next;
+  }
+
+  private record BudgetSeed(String month, Map<String, BigDecimal> amounts) {}
+
+  private BudgetSeed precedingBudget(int year) throws IOException {
+    List<Integer> previousYears;
+    try (var files = Files.list(directory)) {
+      previousYears =
+          files
+              .map(p -> p.getFileName().toString())
+              .filter(n -> n.matches("ledger-\\d{4}\\.xml"))
+              .map(n -> Integer.parseInt(n.substring(7, 11)))
+              .filter(y -> y >= 2000 && y < year)
+              .sorted(Comparator.reverseOrder())
+              .toList();
+    }
+    for (int previousYear : previousYears) {
+      Year ledger = readUnlocked(previousYear);
+      for (int i = 11; i >= 0; i--) {
+        Month month = ledger.months().get(i);
+        if (month.budgetOrigin() == BudgetOrigin.MANUAL)
+          return new BudgetSeed(
+              java.time.YearMonth.of(previousYear, month.number()).toString(), month.budgets());
+      }
+    }
+    return null;
+  }
+
+  private Year carryForward(Year year) throws IOException {
+    var catalog = new com.hisabo.profile.BudgetCategories().read(directory);
+    var known =
+        catalog.entries().stream()
+            .map(com.hisabo.profile.BudgetCategories.Entry::id)
+            .collect(java.util.stream.Collectors.toSet());
+    BudgetSeed seed = precedingBudget(year.year());
+    var months = new ArrayList<Month>();
+    for (Month month : year.months()) {
+      // Verify references before an automatic write, including references in inherited plans.
+      if (!known.containsAll(month.budgets().keySet())
+          || month.transactions().stream()
+              .anyMatch(t -> t.type() == Type.EXPENSE && !known.contains(t.category()))
+          || (seed != null && !known.containsAll(seed.amounts().keySet())))
+        throw new StorageException(
+            "The budget references missing categories. Restore budget-categories.xml; the ledger is"
+                + " preserved.",
+            null);
+      if (month.budgetOrigin() == BudgetOrigin.MANUAL) {
+        seed =
+            new BudgetSeed(
+                java.time.YearMonth.of(year.year(), month.number()).toString(), month.budgets());
+        months.add(month);
+      } else if (seed != null) {
+        var amounts = new LinkedHashMap<String, BigDecimal>();
+        for (var category : catalog.entries())
+          if (category.active())
+            amounts.put(
+                category.id(),
+                seed.amounts().getOrDefault(category.id(), BigDecimal.ZERO.setScale(2)));
+        // Removing a category must not erase a budget already present in this month.
+        // New inherited months omit removed categories; existing copies retain their history.
+        if (month.budgetOrigin() == BudgetOrigin.CARRIED)
+          for (var category : catalog.entries())
+            if (!category.active() && month.budgets().containsKey(category.id()))
+              amounts.put(category.id(), month.budgets().get(category.id()));
+        months.add(
+            new Month(
+                month.number(), amounts, month.transactions(), BudgetOrigin.CARRIED, seed.month()));
+      } else if (month.budgetOrigin() == BudgetOrigin.CARRIED) {
+        throw new StorageException(
+            "The original budget plan is missing. Restore its yearly XML file; the ledger is"
+                + " preserved.",
+            null);
+      } else months.add(month);
+    }
+    return new Year(year.year(), year.currency(), year.revision(), year.demo(), months);
+  }
+
   private Year readUnlocked(int year) {
     Path source = file(year);
     if (!Files.exists(source)) return Ledger.empty(year);
@@ -127,7 +213,7 @@ public class XmlLedgerStore {
       factory.setExpandEntityReferences(false);
       Element root = factory.newDocumentBuilder().parse(stream).getDocumentElement();
       if (!root.getTagName().equals("ledger")
-          || !root.getAttribute("schemaVersion").equals("1")
+          || !Set.of("1", "2", "3").contains(root.getAttribute("schemaVersion"))
           || Integer.parseInt(root.getAttribute("year")) != year
           || !root.getAttribute("currency").equals("USD"))
         throw new IllegalArgumentException("Invalid ledger header");
@@ -140,23 +226,25 @@ public class XmlLedgerStore {
         int number = Integer.parseInt(month.getAttribute("number"));
         if (number < 1 || number > 12 || !seenMonths.add(number))
           throw new IllegalArgumentException("Invalid month");
-        Map<Category, BigDecimal> budgets = new EnumMap<>(Category.class);
+        Map<String, BigDecimal> budgets = new LinkedHashMap<>();
         for (Element budget : children(single(month, "budgets"), "budget")) {
-          Category category = Category.valueOf(budget.getAttribute("category"));
-          if (category.type != Type.EXPENSE
+          String category = budget.getAttribute("category");
+          if (!com.hisabo.profile.BudgetCategories.isExpenseId(category)
               || budgets.put(category, amount(budget.getAttribute("amount"), false)) != null)
             throw new IllegalArgumentException("Invalid budget category");
         }
-        if (budgets.size() != 6) throw new IllegalArgumentException("Missing expense budgets");
+        if (root.getAttribute("schemaVersion").equals("1")
+            && !budgets.keySet().equals(com.hisabo.profile.BudgetCategories.defaultIds()))
+          throw new IllegalArgumentException("Missing expense budgets");
         List<Transaction> transactions = new ArrayList<>();
         for (Element tx : children(single(month, "transactions"), "transaction")) {
           UUID id = UUID.fromString(tx.getAttribute("id"));
           Type type = Type.valueOf(tx.getAttribute("type"));
-          Category category = Category.valueOf(tx.getAttribute("category"));
+          String category = tx.getAttribute("category");
           LocalDate date = LocalDate.parse(tx.getAttribute("date"));
           String description = single(tx, "description").getTextContent();
           if (!ids.add(id)
-              || category.type != type
+              || !com.hisabo.profile.BudgetCategories.matchesType(category, type)
               || date.getYear() != year
               || date.getMonthValue() != number
               || description.isBlank()
@@ -174,7 +262,25 @@ public class XmlLedgerStore {
                   Instant.parse(tx.getAttribute("createdAt")),
                   Instant.parse(tx.getAttribute("updatedAt"))));
         }
-        months.add(new Month(number, budgets, transactions));
+        String originText = month.getAttribute("budgetOrigin");
+        BudgetOrigin origin =
+            originText.isEmpty()
+                ? (budgets.values().stream().anyMatch(v -> v.signum() != 0)
+                    ? BudgetOrigin.MANUAL
+                    : BudgetOrigin.UNSET)
+                : BudgetOrigin.valueOf(originText);
+        if (root.getAttribute("schemaVersion").equals("3") && originText.isEmpty())
+          throw new IllegalArgumentException("Missing budget origin");
+        String budgetSource =
+            month.hasAttribute("budgetSource") ? month.getAttribute("budgetSource") : null;
+        if (origin == BudgetOrigin.CARRIED) {
+          var sourceMonth = java.time.YearMonth.parse(budgetSource);
+          if (sourceMonth.getYear() < 2000
+              || !sourceMonth.isBefore(java.time.YearMonth.of(year, number)))
+            throw new IllegalArgumentException("Invalid budget source");
+        } else if (budgetSource != null)
+          throw new IllegalArgumentException("Unexpected budget source");
+        months.add(new Month(number, budgets, transactions, origin, budgetSource));
       }
       if (months.size() != 12) throw new IllegalArgumentException("Expected twelve months");
       months.sort(Comparator.comparingInt(Month::number));
@@ -210,7 +316,7 @@ public class XmlLedgerStore {
           root,
           Map.of(
               "schemaVersion",
-              "1",
+              "3",
               "year",
               Integer.toString(year.year()),
               "currency",
@@ -228,18 +334,19 @@ public class XmlLedgerStore {
                 Integer.toString(month.number()),
                 "name",
                 java.time.Month.of(month.number()).name()));
+        node.setAttribute("budgetOrigin", month.budgetOrigin().name());
+        if (month.budgetSource() != null) node.setAttribute("budgetSource", month.budgetSource());
         Element budgets = append(document, node, "budgets");
-        for (Category c : Category.values())
-          if (c.type == Type.EXPENSE) {
-            Element b = append(document, budgets, "budget");
-            attrs(
-                b,
-                Map.of(
-                    "category",
-                    c.name(),
-                    "amount",
-                    month.budgets().get(c).setScale(2).toPlainString()));
-          }
+        for (var budget : month.budgets().entrySet()) {
+          Element b = append(document, budgets, "budget");
+          attrs(
+              b,
+              Map.of(
+                  "category",
+                  budget.getKey(),
+                  "amount",
+                  budget.getValue().setScale(2).toPlainString()));
+        }
         Element transactions = append(document, node, "transactions");
         for (Transaction tx : month.transactions()) {
           Element t = append(document, transactions, "transaction");
@@ -253,7 +360,7 @@ public class XmlLedgerStore {
                   "amount",
                   tx.amount().setScale(2).toPlainString(),
                   "category",
-                  tx.category().name(),
+                  tx.category(),
                   "account",
                   tx.account().name(),
                   "date",
